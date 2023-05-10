@@ -1,23 +1,34 @@
 package org.esgi.project.streaming
 
 import io.github.azhur.kafka.serde.PlayJsonSupport
-import org.apache.kafka.clients.consumer.ConsumerConfig
-import org.apache.kafka.clients.producer.ProducerConfig
+import org.apache.kafka.common.serialization.Serde
+import org.apache.kafka.streams.Topology
 import org.apache.kafka.streams.scala._
+import org.apache.kafka.streams.scala.kstream._
 import org.apache.kafka.streams.{KafkaStreams, StreamsConfig}
+import org.apache.kafka.streams.scala.ImplicitConversions._
+import org.apache.kafka.streams.scala.serialization.Serdes._
+import org.esgi.project.streaming.models.{View}
+import utils.KafkaConfig
 
+import java.util.UUID
 import java.util.Properties
 
-object StreamProcessing extends PlayJsonSupport {
+object StreamProcessing extends KafkaConfig with PlayJsonSupport {
 
-  val applicationName = s"some-application-name"
+  override def applicationName = s"tmdb-events-stream-web-app-${UUID.randomUUID}"
 
-  private val props: Properties = buildProperties
+  val viewsTopicName:String = "views"
+  val likesTopicName:String = "likes"
+
+  implicit val viewsSerde: Serde[View] = toSerde[View]
 
   // defining processing graph
   val builder: StreamsBuilder = new StreamsBuilder
 
-  def run(): KafkaStreams = {
+  val views:KStream[String, View] = builder.stream(viewsTopicName)
+
+  /*def run(): KafkaStreams = {
     val streams: KafkaStreams = new KafkaStreams(builder.build(), props)
     streams.start()
 
@@ -28,18 +39,7 @@ object StreamProcessing extends PlayJsonSupport {
       }
     }))
     streams
-  }
+  }*/
 
-  // auto loader from properties file in project
-  def buildProperties: Properties = {
-    val properties = new Properties()
-    properties.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092")
-    properties.put(StreamsConfig.CLIENT_ID_CONFIG, applicationName)
-    properties.put(StreamsConfig.APPLICATION_ID_CONFIG, applicationName)
-    properties.put(StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, "0")
-    properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest")
-    properties.put(StreamsConfig.REPLICATION_FACTOR_CONFIG, "-1")
-    properties.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, "1")
-    properties
-  }
+  def topology: Topology = builder.build()
 }
