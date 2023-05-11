@@ -25,12 +25,12 @@ object StreamProcessing extends KafkaConfig with PlayJsonSupport {
   val likesTopicName: String = "likes"
 
   // STORE NAMES
-  val allTimesViewsPerCategoryStoreName: String = "allTimesViewsPerCategory"
   val viewsForHalfViewedLastFiveMinutesStoreName: String = "viewsForHalfViewedLastFiveMinutes"
   val viewsStartOnlyViewedLastFiveMinutesStoreName: String = "viewsStartOnlyViewedLastFiveMinutes"
-  val viewsForFullViewedLastFiveMinutesStoreName: String =
-    "viewsForFullViewedLastFiveMitopTenMostViewedMoviesStoreNamenutes"
-  val viewsPerCategoryLastFiveMinutesStoreName: String = "viewsPerCategoryLastFiveMinutes"
+  val viewsForFullViewedLastFiveMinutesStoreName: String = "viewsForFullViewedLastFiveMinutes"
+  val totalViewsForHalfViewedStoreName: String = "totalViewsForHalfViewed"
+  val totalViewsStartOnlyViewedStoreName: String = "totalViewsStartOnlyViewed"
+  val totalViewsForFullViewedStoreName: String = "totalViewsForFullViewed"
   val topTenBestMoviesStoreName: String = "topTenBestMovies"
   val topTenWorstMoviesStoreName: String = "topTenWorstMovies"
   val topTenMostViewedMoviesStoreName: String = "topTenMostViewedMovies"
@@ -44,10 +44,9 @@ object StreamProcessing extends KafkaConfig with PlayJsonSupport {
   // defining processing graph
   val builder: StreamsBuilder = new StreamsBuilder
 
-  val views: KStream[String, View] = builder.stream(viewsTopicName)
-  val likes: KStream[String, Like] = builder.stream(likesTopicName)
-
-  val viewsAndLikes: KStream[String, ViewsAndLikes] = views.join(likes)(
+  val views: KStream[Int, View] = builder.stream(viewsTopicName)
+  val likes: KStream[Int, Like] = builder.stream(likesTopicName)
+  val viewsAndLikes: KStream[Int, ViewsAndLikes] = views.join(likes)(
     joiner = { (view, like) =>
       ViewsAndLikes(
         view._id,
@@ -59,11 +58,65 @@ object StreamProcessing extends KafkaConfig with PlayJsonSupport {
     windows = JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(30))
   )
 
+
   // Moyenne de score par film
   val meanScorePerMovie: KTable[String, Float] = viewsAndLikes
     .groupBy((_, value) => value._id.toString)
     .aggregate[List[ViewsAndLikes]](List.empty[ViewsAndLikes])((_, value, aggregate) => aggregate :+ value)(
       Materialized.as(meanScorePerMovieStoreName)
+
+  val allViewsForHalfCategory: KTable[Int, Long] = views
+    .filter((_,view) => view.viewCategory.contains("half"))
+    .groupBy((_,view) => view._id)
+    .count()(
+    Materialized.as(totalViewsForHalfViewedStoreName)
+  )
+  val allViewsForFullCategory: KTable[Int, Long] = views
+    .filter((_, view) => view.viewCategory.contains("full"))
+    .groupBy((_, view) => view._id)
+    .count()(
+      Materialized.as(totalViewsForFullViewedStoreName)
+    )
+
+  val allViewsForStartOnlyCategory: KTable[Int, Long] = views
+    .filter((_, view) => view.viewCategory.contains("start_only"))
+    .groupBy((_, view) => view._id)
+    .count()(
+      Materialized.as(totalViewsStartOnlyViewedStoreName)
+    )
+
+  val viewsForStartOnlyLastFiveMinutes: KTable[Windowed[Int], Long] = views
+    .filter((_, view) => view.viewCategory.contains("start_only"))
+    .groupBy((_, view) => view._id)
+    .windowedBy(
+      TimeWindows
+        .ofSizeWithNoGrace(Duration.ofMinutes(5))
+        .advanceBy(Duration.ofMinutes(1))
+    )
+    .count()(
+      Materialized.as(viewsStartOnlyViewedLastFiveMinutesStoreName)
+    )
+  val viewsForHalfLastFiveMinutes: KTable[Windowed[Int], Long] = views
+    .filter((_, view) => view.viewCategory.contains("half"))
+    .groupBy((_, view) => view._id)
+    .windowedBy(
+      TimeWindows
+        .ofSizeWithNoGrace(Duration.ofMinutes(5))
+        .advanceBy(Duration.ofMinutes(1))
+    )
+    .count()(
+      Materialized.as(viewsForHalfViewedLastFiveMinutesStoreName)
+    )
+  val viewsForFullLastFiveMinutes: KTable[Windowed[Int], Long] = views
+    .filter((_, view) => view.viewCategory.contains("full"))
+    .groupBy((_, view) => view._id)
+    .windowedBy(
+      TimeWindows
+        .ofSizeWithNoGrace(Duration.ofMinutes(5))
+        .advanceBy(Duration.ofMinutes(1))
+    )
+    .count()(
+      Materialized.as(viewsForFullViewedLastFiveMinutesStoreName)
     )
     .mapValues(movies => {
       movies.map(_.score).sum / movies.size
