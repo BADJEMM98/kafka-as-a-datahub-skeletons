@@ -144,50 +144,5 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
       testDriver.getKeyValueStore[Int, Long](StreamProcessing.totalViewsForHalfViewedStoreName)
 
     assert(totalViewsForHalfCategory.get(1) == 2)
-    /*
-        viewsPerCategory.foreach { case (category, count) =>
-          val row: List[KeyValue[lang.Long, ValueAndTimestamp[Long]]] =
-            visitsPerCategoryBucketedPerMinute
-              .fetch(
-                category,
-                visits.head.timestamp.truncatedTo(ChronoUnit.MINUTES).toInstant,
-                visits.last.timestamp.truncatedTo(ChronoUnit.MINUTES).toInstant
-              )
-              .asScala
-              .toList
-          row.headOption match {
-            case Some(row) => assert(row.value.value() == count)
-            case None      => assert(false, s"No data for $category in ${visitsPerCategoryBucketedPerMinute.name()}")
-          }
-        }
-
-        // Assert the average latency per URL in the last 30 seconds
-        val averageLatencyPerUrl: Map[String, Long] = generatedEvents
-          .groupBy(_.visit.url)
-          .map { case (url, events) =>
-            val meanLatency = events.map(_.metric.latency).sum / events.size
-            (url, meanLatency)
-          }
-
-        val averageLatencyPerUrlBucketedPerMinute: WindowStore[String, ValueAndTimestamp[MeanLatencyForURL]] =
-          testDriver.getTimestampedWindowStore[String, MeanLatencyForURL](
-            StreamProcessing.AverageLatencyPerUrlBucketedPerMinuteStoreName
-          )
-
-        averageLatencyPerUrl.foreach { case (url, meanLatency) =>
-          val row: List[KeyValue[lang.Long, ValueAndTimestamp[MeanLatencyForURL]]] =
-            averageLatencyPerUrlBucketedPerMinute
-              .fetch(
-                url,
-                visits.head.timestamp.truncatedTo(ChronoUnit.MINUTES).toInstant,
-                visits.last.timestamp.truncatedTo(ChronoUnit.MINUTES).toInstant
-              )
-              .asScala
-              .toList
-          row.headOption match {
-            case Some(row) => assert(row.value.value().meanLatency == meanLatency)
-            case None      => assert(false, s"No data for $url in ${averageLatencyPerUrlBucketedPerMinute.name()}")
-          }
-        }*/
       }
 }
