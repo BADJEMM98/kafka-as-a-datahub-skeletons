@@ -132,13 +132,10 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
     viewPipe.pipeRecordList(views.map(_.toTestRecord).asJava)
     likePipe.pipeRecordList(likes.map(_.toTestRecord).asJava)
 
-    // Then
-
-    // Assert the count of visits per category in the last 30 seconds
-    val totalviewsForHalfCategory: Map[Int, Long] = views
+    /*val totalviewsForHalfCategory: Map[Int, Long] = views
       .filter(_.viewCategory.contains("half"))
       .groupBy(_._id)
-      .map { case (_id, views) => (_id, views.size) }
+      .map { case (_id, views) => (_id, views.size) }*/
 
     val totalViewsForHalfCategory: KeyValueStore[Int, Long] =
       testDriver.getKeyValueStore[Int, Long](StreamProcessing.totalViewsForHalfViewedStoreName)
