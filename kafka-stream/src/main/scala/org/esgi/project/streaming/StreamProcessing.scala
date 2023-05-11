@@ -25,11 +25,12 @@ object StreamProcessing extends KafkaConfig with PlayJsonSupport {
   val likesTopicName: String = "likes"
 
   // STORE NAMES
-  val allTimesViewsPerCategoryStoreName: String = "allTimesViewsPerCategory"
   val viewsForHalfViewedLastFiveMinutesStoreName: String = "viewsForHalfViewedLastFiveMinutes"
   val viewsStartOnlyViewedLastFiveMinutesStoreName: String = "viewsStartOnlyViewedLastFiveMinutes"
   val viewsForFullViewedLastFiveMinutesStoreName: String = "viewsForFullViewedLastFiveMinutes"
-  val viewsPerCategoryLastFiveMinutesStoreName: String = "viewsPerCategoryLastFiveMinutes"
+  val totalViewsForHalfViewedStoreName: String = "totalViewsForHalfViewed"
+  val totalViewsStartOnlyViewedStoreName: String = "totalViewsStartOnlyViewed"
+  val totalViewsForFullViewedStoreName: String = "totalViewsForFullViewed"
   val topTenBestMoviesStoreName: String = "topTenBestMovies"
   val topTenWorstMoviesStoreName: String = "topTenWorstMovies"
   val topTenMostViewedMoviesStoreName: String = "topTenMostViewedMovies"
@@ -54,18 +55,58 @@ object StreamProcessing extends KafkaConfig with PlayJsonSupport {
     windows = JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(30))
   )
 
-  val viewsGroupedByCategory: KGroupedStream[String, View] = views.groupBy((_, view) => view.viewCategory)
-  val allViewsPerCategory: KTable[String, Long] = viewsGroupedByCategory.count()(
-    Materialized.as(allTimesViewsPerCategoryStoreName)
+  val allViewsForHalfCategory: KTable[Int, Long] = views
+    .filter((_,view) => view.viewCategory.contains("half"))
+    .groupBy((_,view) => view._id)
+    .count()(
+    Materialized.as(totalViewsForHalfViewedStoreName)
   )
-  val viewsPerCategoryLastFiveMinutes: KTable[Windowed[String], Long] = viewsGroupedByCategory
+  val allViewsForFullCategory: KTable[Int, Long] = views
+    .filter((_, view) => view.viewCategory.contains("full"))
+    .groupBy((_, view) => view._id)
+    .count()(
+      Materialized.as(totalViewsForFullViewedStoreName)
+    )
+
+  val allViewsForStartOnlyCategory: KTable[Int, Long] = views
+    .filter((_, view) => view.viewCategory.contains("start_only"))
+    .groupBy((_, view) => view._id)
+    .count()(
+      Materialized.as(totalViewsStartOnlyViewedStoreName)
+    )
+
+  val viewsForStartOnlyLastFiveMinutes: KTable[Windowed[Int], Long] = views
+    .filter((_, view) => view.viewCategory.contains("start_only"))
+    .groupBy((_, view) => view._id)
     .windowedBy(
       TimeWindows
         .ofSizeWithNoGrace(Duration.ofMinutes(5))
         .advanceBy(Duration.ofMinutes(1))
     )
     .count()(
-      Materialized.as(viewsPerCategoryLastFiveMinutesStoreName)
+      Materialized.as(viewsStartOnlyViewedLastFiveMinutesStoreName)
+    )
+  val viewsForHalfLastFiveMinutes: KTable[Windowed[Int], Long] = views
+    .filter((_, view) => view.viewCategory.contains("half"))
+    .groupBy((_, view) => view._id)
+    .windowedBy(
+      TimeWindows
+        .ofSizeWithNoGrace(Duration.ofMinutes(5))
+        .advanceBy(Duration.ofMinutes(1))
+    )
+    .count()(
+      Materialized.as(viewsForHalfViewedLastFiveMinutesStoreName)
+    )
+  val viewsForFullLastFiveMinutes: KTable[Windowed[Int], Long] = views
+    .filter((_, view) => view.viewCategory.contains("full"))
+    .groupBy((_, view) => view._id)
+    .windowedBy(
+      TimeWindows
+        .ofSizeWithNoGrace(Duration.ofMinutes(5))
+        .advanceBy(Duration.ofMinutes(1))
+    )
+    .count()(
+      Materialized.as(viewsForFullViewedLastFiveMinutesStoreName)
     )
   /*
 
