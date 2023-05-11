@@ -40,9 +40,9 @@ object StreamProcessing extends KafkaConfig with PlayJsonSupport {
   // defining processing graph
   val builder: StreamsBuilder = new StreamsBuilder
 
-  val views: KStream[Int, View] = builder.stream(viewsTopicName)
-  val likes: KStream[Int, Like] = builder.stream(likesTopicName)
-  val viewsAndLikes: KStream[Int, ViewsAndLikes] = views.join(likes)(
+  val views: KStream[String, View] = builder.stream(viewsTopicName)
+  val likes: KStream[String, Like] = builder.stream(likesTopicName)
+  val viewsAndLikes: KStream[String, ViewsAndLikes] = views.join(likes)(
     joiner = { (view, like) =>
       ViewsAndLikes(
         view._id,
