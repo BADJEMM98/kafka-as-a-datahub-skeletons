@@ -2,7 +2,7 @@ package streaming
 
 import io.github.azhur.kafka.serde.PlayJsonSupport
 import org.apache.kafka.streams.scala.serialization.Serdes
-import org.apache.kafka.streams.state.{ValueAndTimestamp, WindowStore}
+import org.apache.kafka.streams.state.{KeyValueStore, ValueAndTimestamp, WindowStore}
 import org.apache.kafka.streams.test.TestRecord
 import org.apache.kafka.streams.{KeyValue, TopologyTestDriver}
 import org.esgi.project.streaming.StreamProcessing
@@ -81,7 +81,7 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
 
     val categories = List("half", "full", "start_only")
 
-    val generatedEvents: List[GeneratedView] = titles.flatMap { title =>
+   /* val generatedEvents: List[GeneratedView] = titles.flatMap { title =>
       val count = 5 + Random.nextInt(25)
       val id = titles.indexOf(title) + 1
       (1 to count)
@@ -93,10 +93,27 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
             like = Like(id, score)
           )
         }
-    }
+    }*/
 
-    val views = generatedEvents.map(_.view)
-    val likes = generatedEvents.map(_.like)
+    val views = List(
+      View(1,"Blade Runner", "half"),
+      View(1,"Blade Runner", "full"),
+      View(1,"Blade Runner", "start_only"),
+      View(1,"Blade Runner", "half"),
+      View(2,"Pulp Fiction", "half"),
+      View(2,"Pulp Fiction", "start_only"),
+      View(2,"Pulp Fiction", "start_only"),
+      View(2,"Pulp Fiction", "start_only"),
+      View(3,"Gladiator", "half"),
+    )
+    val likes = List(
+      Like(1, 4.8f),
+      Like(2, 4f),
+      Like(1, 3f),
+      Like(3, 2f),
+      Like(1, 1f),
+      Like(1, 0f),
+    )
 
     // When
     val testDriver: TopologyTestDriver =
@@ -123,53 +140,54 @@ class StreamProcessingSpec extends AnyFunSuite with PlayJsonSupport {
       .groupBy(_._id)
       .map { case (_id, views) => (_id, views.size) }
 
-    val visitsPerCategoryBucketedPerMinute: WindowStore[String, ValueAndTimestamp[Long]] =
-      testDriver.getTimestampedWindowStore[String, Long](StreamProcessing.totalViewsForHalfViewedStoreName)
+    val totalViewsForHalfCategory: KeyValueStore[Int, Long] =
+      testDriver.getKeyValueStore[Int, Long](StreamProcessing.totalViewsForHalfViewedStoreName)
 
-    viewsPerCategory.foreach { case (category, count) =>
-      val row: List[KeyValue[lang.Long, ValueAndTimestamp[Long]]] =
-        visitsPerCategoryBucketedPerMinute
-          .fetch(
-            category,
-            visits.head.timestamp.truncatedTo(ChronoUnit.MINUTES).toInstant,
-            visits.last.timestamp.truncatedTo(ChronoUnit.MINUTES).toInstant
+    assert(totalViewsForHalfCategory.get(1) == 2)
+    /*
+        viewsPerCategory.foreach { case (category, count) =>
+          val row: List[KeyValue[lang.Long, ValueAndTimestamp[Long]]] =
+            visitsPerCategoryBucketedPerMinute
+              .fetch(
+                category,
+                visits.head.timestamp.truncatedTo(ChronoUnit.MINUTES).toInstant,
+                visits.last.timestamp.truncatedTo(ChronoUnit.MINUTES).toInstant
+              )
+              .asScala
+              .toList
+          row.headOption match {
+            case Some(row) => assert(row.value.value() == count)
+            case None      => assert(false, s"No data for $category in ${visitsPerCategoryBucketedPerMinute.name()}")
+          }
+        }
+
+        // Assert the average latency per URL in the last 30 seconds
+        val averageLatencyPerUrl: Map[String, Long] = generatedEvents
+          .groupBy(_.visit.url)
+          .map { case (url, events) =>
+            val meanLatency = events.map(_.metric.latency).sum / events.size
+            (url, meanLatency)
+          }
+
+        val averageLatencyPerUrlBucketedPerMinute: WindowStore[String, ValueAndTimestamp[MeanLatencyForURL]] =
+          testDriver.getTimestampedWindowStore[String, MeanLatencyForURL](
+            StreamProcessing.AverageLatencyPerUrlBucketedPerMinuteStoreName
           )
-          .asScala
-          .toList
-      row.headOption match {
-        case Some(row) => assert(row.value.value() == count)
-        case None      => assert(false, s"No data for $category in ${visitsPerCategoryBucketedPerMinute.name()}")
+
+        averageLatencyPerUrl.foreach { case (url, meanLatency) =>
+          val row: List[KeyValue[lang.Long, ValueAndTimestamp[MeanLatencyForURL]]] =
+            averageLatencyPerUrlBucketedPerMinute
+              .fetch(
+                url,
+                visits.head.timestamp.truncatedTo(ChronoUnit.MINUTES).toInstant,
+                visits.last.timestamp.truncatedTo(ChronoUnit.MINUTES).toInstant
+              )
+              .asScala
+              .toList
+          row.headOption match {
+            case Some(row) => assert(row.value.value().meanLatency == meanLatency)
+            case None      => assert(false, s"No data for $url in ${averageLatencyPerUrlBucketedPerMinute.name()}")
+          }
+        }*/
       }
-    }
-
-    // Assert the average latency per URL in the last 30 seconds
-    val averageLatencyPerUrl: Map[String, Long] = generatedEvents
-      .groupBy(_.visit.url)
-      .map { case (url, events) =>
-        val meanLatency = events.map(_.metric.latency).sum / events.size
-        (url, meanLatency)
-      }
-
-    val averageLatencyPerUrlBucketedPerMinute: WindowStore[String, ValueAndTimestamp[MeanLatencyForURL]] =
-      testDriver.getTimestampedWindowStore[String, MeanLatencyForURL](
-        StreamProcessing.AverageLatencyPerUrlBucketedPerMinuteStoreName
-      )
-
-    averageLatencyPerUrl.foreach { case (url, meanLatency) =>
-      val row: List[KeyValue[lang.Long, ValueAndTimestamp[MeanLatencyForURL]]] =
-        averageLatencyPerUrlBucketedPerMinute
-          .fetch(
-            url,
-            visits.head.timestamp.truncatedTo(ChronoUnit.MINUTES).toInstant,
-            visits.last.timestamp.truncatedTo(ChronoUnit.MINUTES).toInstant
-          )
-          .asScala
-          .toList
-      row.headOption match {
-        case Some(row) => assert(row.value.value().meanLatency == meanLatency)
-        case None      => assert(false, s"No data for $url in ${averageLatencyPerUrlBucketedPerMinute.name()}")
-      }
-    }
-
-  }
 }

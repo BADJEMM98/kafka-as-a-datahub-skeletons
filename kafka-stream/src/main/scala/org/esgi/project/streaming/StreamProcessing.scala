@@ -108,17 +108,9 @@ object StreamProcessing extends KafkaConfig with PlayJsonSupport {
     .count()(
       Materialized.as(viewsForFullViewedLastFiveMinutesStoreName)
     )
-  /*
 
-  val topTenBestMovies: KTable[String, String] = viewsAndLikes
-    .groupBy((_, movie) => movie._id)
-    .re
-    .aggregate()
-    .filter((_,movie) => movie.score > 4.0))
-   */
-
-  /*def run(): KafkaStreams = {
-    val streams: KafkaStreams = new KafkaStreams(builder.build(), props)
+  def run(): KafkaStreams = {
+    val streams: KafkaStreams = new KafkaStreams(builder.build(), buildStreamsProperties)
     streams.start()
 
     // Add shutdown hook to respond to SIGTERM and gracefully close Kafka Streams
@@ -128,7 +120,7 @@ object StreamProcessing extends KafkaConfig with PlayJsonSupport {
       }
     }))
     streams
-  }*/
+  }
 
   def topology: Topology = builder.build()
 }
