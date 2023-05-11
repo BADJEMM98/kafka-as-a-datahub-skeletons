@@ -35,6 +35,8 @@ object StreamProcessing extends KafkaConfig with PlayJsonSupport {
   val topTenWorstMoviesStoreName: String = "topTenWorstMovies"
   val topTenMostViewedMoviesStoreName: String = "topTenMostViewedMovies"
   val topTenLeastViewedMoviesStoreName: String = "topTenLeastViewedMovies"
+  val meanScorePerMovieStoreName: String = "meanScorePerMovie"
+  val numberViewsPerMovieStoreName: String = "numberViewsPerMovie"
 
   implicit val viewSerde: Serde[View] = toSerde[View]
   implicit val likeSerde: Serde[Like] = toSerde[Like]
@@ -61,7 +63,7 @@ object StreamProcessing extends KafkaConfig with PlayJsonSupport {
   val meanScorePerMovie: KTable[String, Float] = viewsAndLikes
     .groupBy((_, value) => value._id.toString)
     .aggregate[List[ViewsAndLikes]](List.empty[ViewsAndLikes])((_, value, aggregate) => aggregate :+ value)(
-      Materialized.as(topTenWorstMoviesStoreName)
+      Materialized.as(meanScorePerMovieStoreName)
     )
     .mapValues(movies => {
       movies.map(_.score).sum / movies.size
@@ -69,7 +71,7 @@ object StreamProcessing extends KafkaConfig with PlayJsonSupport {
 
   // Nombre de vues par films
   val numberViewsPerMovie: KTable[String, Long] = viewsAndLikes.groupByKey
-    .count()(Materialized.as(topTenMostViewedMoviesStoreName))
+    .count()(Materialized.as(numberViewsPerMovieStoreName))
 
   /*def run(): KafkaStreams = {
     val streams: KafkaStreams = new KafkaStreams(builder.build(), props)
