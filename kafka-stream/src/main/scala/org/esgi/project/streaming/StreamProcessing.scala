@@ -28,7 +28,8 @@ object StreamProcessing extends KafkaConfig with PlayJsonSupport {
   val allTimesViewsPerCategoryStoreName: String = "allTimesViewsPerCategory"
   val viewsForHalfViewedLastFiveMinutesStoreName: String = "viewsForHalfViewedLastFiveMinutes"
   val viewsStartOnlyViewedLastFiveMinutesStoreName: String = "viewsStartOnlyViewedLastFiveMinutes"
-  val viewsForFullViewedLastFiveMinutesStoreName: String = "viewsForFullViewedLastFiveMitopTenMostViewedMoviesStoreNamenutes"
+  val viewsForFullViewedLastFiveMinutesStoreName: String =
+    "viewsForFullViewedLastFiveMitopTenMostViewedMoviesStoreNamenutes"
   val viewsPerCategoryLastFiveMinutesStoreName: String = "viewsPerCategoryLastFiveMinutes"
   val topTenBestMoviesStoreName: String = "topTenBestMovies"
   val topTenWorstMoviesStoreName: String = "topTenWorstMovies"
@@ -56,63 +57,19 @@ object StreamProcessing extends KafkaConfig with PlayJsonSupport {
     windows = JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(30))
   )
 
-  // Les films ayant les meilleurs retours (score moyen au dessus de 4)
-  val topTenBestMovies: KTable[String, List[ViewsAndLikes]] = viewsAndLikes
-    .groupBy((_, value) => value._id.toString)
-    .aggregate[List[ViewsAndLikes]](List.empty[ViewsAndLikes])((_, value, aggregate) => aggregate :+ value)(
-      Materialized.as(topTenBestMoviesStoreName)
-    )
-    .mapValues(movies => {
-      val averageScore = movies.map(_.score).sum / movies.size
-      movies
-        .sortBy(_.score)(Ordering[Float].reverse)
-        .take(10)
-    })
-    .filter((_, movies) => {
-      val averageScore = movies.map(_.score).sum / movies.size
-      averageScore > 4
-    })
-
-  // Les films ayant les pires retours (score moyen en dessous de 2)
-  val topTenWorstMovies: KTable[String, List[ViewsAndLikes]] = viewsAndLikes
+  // Moyenne de score par film
+  val meanScorePerMovie: KTable[String, Float] = viewsAndLikes
     .groupBy((_, value) => value._id.toString)
     .aggregate[List[ViewsAndLikes]](List.empty[ViewsAndLikes])((_, value, aggregate) => aggregate :+ value)(
       Materialized.as(topTenWorstMoviesStoreName)
     )
     .mapValues(movies => {
-      val averageScore = movies.map(_.score).sum / movies.size
-      movies
-        .sortBy(_.score)(Ordering[Float].reverse)
-        .take(10)
-    })
-    .filter((_, movies) => {
-      val averageScore = movies.map(_.score).sum / movies.size
-      averageScore < 2
+      movies.map(_.score).sum / movies.size
     })
 
-  // Les films ayant le plus de vues
-  val topTenMostViewedMovies: KTable[String, List[ViewsAndLikes]] = viewsAndLikes
-    .groupByKey
+  // Nombre de vues par films
+  val numberViewsPerMovie: KTable[String, Long] = viewsAndLikes.groupByKey
     .count()(Materialized.as(topTenMostViewedMoviesStoreName))
-    .toStream
-    .mapValues((_, count) => count)
-    .groupByKey
-    .reduce((count1, count2) => Math.max(count1, count2))
-    .toStream
-    .sortBy((_, count) => count, Ordering[Long].reverse)
-    .limit(10)
-
-
-  // Les films ayant le moins de vues
-
-  /*
-
-  val topTenBestMovies: KTable[String, String] = viewsAndLikes
-    .groupBy((_, movie) => movie._id)
-    .re
-    .aggregate()
-    .filter((_,movie) => movie.score > 4.0))
-   */
 
   /*def run(): KafkaStreams = {
     val streams: KafkaStreams = new KafkaStreams(builder.build(), props)
