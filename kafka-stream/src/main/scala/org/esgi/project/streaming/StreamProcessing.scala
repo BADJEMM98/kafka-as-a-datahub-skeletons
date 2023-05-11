@@ -28,7 +28,7 @@ object StreamProcessing extends KafkaConfig with PlayJsonSupport {
   val allTimesViewsPerCategoryStoreName: String = "allTimesViewsPerCategory"
   val viewsForHalfViewedLastFiveMinutesStoreName: String = "viewsForHalfViewedLastFiveMinutes"
   val viewsStartOnlyViewedLastFiveMinutesStoreName: String = "viewsStartOnlyViewedLastFiveMinutes"
-  val viewsForFullViewedLastFiveMinutesStoreName: String = "viewsForFullViewedLastFiveMinutes"
+  val viewsForFullViewedLastFiveMinutesStoreName: String = "viewsForFullViewedLastFiveMitopTenMostViewedMoviesStoreNamenutes"
   val viewsPerCategoryLastFiveMinutesStoreName: String = "viewsPerCategoryLastFiveMinutes"
   val topTenBestMoviesStoreName: String = "topTenBestMovies"
   val topTenWorstMoviesStoreName: String = "topTenWorstMovies"
@@ -36,12 +36,14 @@ object StreamProcessing extends KafkaConfig with PlayJsonSupport {
   val topTenLeastViewedMoviesStoreName: String = "topTenLeastViewedMovies"
 
   implicit val viewSerde: Serde[View] = toSerde[View]
+  implicit val likeSerde: Serde[Like] = toSerde[Like]
 
   // defining processing graph
   val builder: StreamsBuilder = new StreamsBuilder
 
   val views: KStream[String, View] = builder.stream(viewsTopicName)
   val likes: KStream[String, Like] = builder.stream(likesTopicName)
+
   val viewsAndLikes: KStream[String, ViewsAndLikes] = views.join(likes)(
     joiner = { (view, like) =>
       ViewsAndLikes(
@@ -54,19 +56,55 @@ object StreamProcessing extends KafkaConfig with PlayJsonSupport {
     windows = JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(30))
   )
 
-  val viewsGroupedByCategory: KGroupedStream[String, View] = views.groupBy((_, view) => view.viewCategory)
-  val allViewsPerCategory: KTable[String, Long] = viewsGroupedByCategory.count()(
-    Materialized.as(allTimesViewsPerCategoryStoreName)
-  )
-  val viewsPerCategoryLastFiveMinutes: KTable[Windowed[String], Long] = viewsGroupedByCategory
-    .windowedBy(
-      TimeWindows
-        .ofSizeWithNoGrace(Duration.ofMinutes(5))
-        .advanceBy(Duration.ofMinutes(1))
+  // Les films ayant les meilleurs retours (score moyen au dessus de 4)
+  val topTenBestMovies: KTable[String, List[ViewsAndLikes]] = viewsAndLikes
+    .groupBy((_, value) => value._id.toString)
+    .aggregate[List[ViewsAndLikes]](List.empty[ViewsAndLikes])((_, value, aggregate) => aggregate :+ value)(
+      Materialized.as(topTenBestMoviesStoreName)
     )
-    .count()(
-      Materialized.as(viewsPerCategoryLastFiveMinutesStoreName)
+    .mapValues(movies => {
+      val averageScore = movies.map(_.score).sum / movies.size
+      movies
+        .sortBy(_.score)(Ordering[Float].reverse)
+        .take(10)
+    })
+    .filter((_, movies) => {
+      val averageScore = movies.map(_.score).sum / movies.size
+      averageScore > 4
+    })
+
+  // Les films ayant les pires retours (score moyen en dessous de 2)
+  val topTenWorstMovies: KTable[String, List[ViewsAndLikes]] = viewsAndLikes
+    .groupBy((_, value) => value._id.toString)
+    .aggregate[List[ViewsAndLikes]](List.empty[ViewsAndLikes])((_, value, aggregate) => aggregate :+ value)(
+      Materialized.as(topTenWorstMoviesStoreName)
     )
+    .mapValues(movies => {
+      val averageScore = movies.map(_.score).sum / movies.size
+      movies
+        .sortBy(_.score)(Ordering[Float].reverse)
+        .take(10)
+    })
+    .filter((_, movies) => {
+      val averageScore = movies.map(_.score).sum / movies.size
+      averageScore < 2
+    })
+
+  // Les films ayant le plus de vues
+  val topTenMostViewedMovies: KTable[String, List[ViewsAndLikes]] = viewsAndLikes
+    .groupByKey
+    .count()(Materialized.as(topTenMostViewedMoviesStoreName))
+    .toStream
+    .mapValues((_, count) => count)
+    .groupByKey
+    .reduce((count1, count2) => Math.max(count1, count2))
+    .toStream
+    .sortBy((_, count) => count, Ordering[Long].reverse)
+    .limit(10)
+
+
+  // Les films ayant le moins de vues
+
   /*
 
   val topTenBestMovies: KTable[String, String] = viewsAndLikes
