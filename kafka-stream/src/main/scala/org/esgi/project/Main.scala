@@ -1,6 +1,5 @@
 package org.esgi.project
 
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import com.typesafe.config.{Config, ConfigFactory}
@@ -21,7 +20,7 @@ object Main {
   def main(args: Array[String]) {
     val streams: KafkaStreams = StreamProcessing.run()
     Http()
-      .newServerAt("0.0.0.0", 8080)
+      .newServerAt("0.0.0.0", 8000)
       .bindFlow(WebServer.routes(streams))
     logger.info(s"App started on 8080")
   }

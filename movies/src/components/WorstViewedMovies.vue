@@ -1,10 +1,6 @@
 <script>
-import MovieDetail from '/src/components/MovieDetail.vue'
 export default {
     name: 'MoviesList',
-    components: {
-        MovieDetail,
-    },
     props:{
     }
 }
@@ -18,21 +14,21 @@ export default {
                 <th scope="col">Id</th>
                 <th scope="col">Title</th>
                 <th scope="col">Nombre de vues</th>
-                <th scope="col">Stats</th>
             </tr>
             </thead>
             <tbody>
             <tr>
-                <th scope="row">1</th>
-                <td>Mark</td>
-                <td>Otto</td>
-                <td>
-                    <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#exampleModal">
-                        Afficher les détails
-                    </button>
-                    <MovieDetail title="titre" id="2" views="500" score="3.2"/>
-                </td>
-
+                <th scope="row">122</th>
+                <td>movie title 1</td>
+                <td>3</td>
+            </tr><tr>
+                <th scope="row">62</th>
+                <td>movie title 2</td>
+                <td>2</td>
+            </tr><tr>
+                <th scope="row">18</th>
+                <td>movie title 3</td>
+                <td>1</td>
             </tr>
             </tbody>
         </table>

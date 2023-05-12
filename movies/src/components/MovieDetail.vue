@@ -3,9 +3,9 @@
       name: 'MovieDetail',
       props:{
           title : String,
-          id : Number,
-          views : Number,
-          score : Number,
+          start_only : Number,
+          half : Number,
+          full : Number,
       },
   }
 </script>
@@ -20,9 +20,10 @@
                 </div>
                 <div class="modal-body">
                     <p class="text-dark">
-                        ID : {{ id }}<br>
-                        Nombre de vues :{{ views }}<br>
-                        Score : {{ score }}<br>
+
+                        start_only :{{ start_only }}<br>
+                        half : {{ half }}<br>
+                        full : {{ full }}<br>
                     </p>
 
                 </div>

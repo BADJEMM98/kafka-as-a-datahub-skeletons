@@ -24,13 +24,13 @@ export default {
             <tbody>
                 <tr>
                     <th scope="row">1</th>
-                    <td>Mark</td>
-                    <td>Otto</td>
+                    <td>Movie title</td>
+                    <td>200</td>
                     <td>
                         <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#exampleModal">
                             Afficher les détails
                         </button>
-                        <MovieDetail title="titre" id="2" views="500" score="3.2"/>
+                        <MovieDetail title="titre" start_only="100" half="10" full="90"/>
                     </td>
 
                 </tr>
