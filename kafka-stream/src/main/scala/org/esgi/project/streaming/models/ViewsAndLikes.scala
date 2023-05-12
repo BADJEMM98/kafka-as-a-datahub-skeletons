@@ -2,10 +2,10 @@ package org.esgi.project.streaming.models
 
 import play.api.libs.json.{Json, OFormat}
 case class ViewsAndLikes(
-    _id: Int,
-    title: String,
-    viewCategory: String,
-    score: Float
+                          id: Int,
+                          title: String,
+                          viewCategory: String,
+                          score: Float
 )
 
 object ViewsAndLikes {
