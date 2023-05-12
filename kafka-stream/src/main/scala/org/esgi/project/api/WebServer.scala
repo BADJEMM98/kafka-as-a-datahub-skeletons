@@ -44,7 +44,7 @@ object WebServer extends PlayJsonSupport {
           )
         }
       },
-      path("stats" / "ten" / "worse" / "views") {
+      path("stats" / "ten" / "worst" / "views") {
         get {
           val results = api.topTenLeastViewedMovie
           complete(
