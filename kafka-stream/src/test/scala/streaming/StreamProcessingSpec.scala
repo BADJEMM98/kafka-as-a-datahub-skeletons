@@ -26,7 +26,7 @@ object StreamProcessingSpec {
     implicit class ViewToTestRecord(view: View) {
       def toTestRecord: TestRecord[Int, View] =
         new TestRecord[Int, View](
-          view._id,
+          view.id,
           view,
           Instant.from(DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse("2023-05-11T14:00:00+02:00"))
         )
@@ -35,7 +35,7 @@ object StreamProcessingSpec {
     implicit class LikeToTestRecord(like: Like) {
       def toTestRecord: TestRecord[Int, Like] =
         new TestRecord[Int, Like](
-          like._id,
+          like.id,
           like,
           Instant.from(DateTimeFormatter.ISO_OFFSET_DATE_TIME.parse("2023-05-11T14:00:00+02:00"))
         )
