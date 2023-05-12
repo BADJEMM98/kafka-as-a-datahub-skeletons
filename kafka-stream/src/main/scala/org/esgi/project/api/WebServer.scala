@@ -11,15 +11,14 @@ object WebServer extends PlayJsonSupport {
   def routes(streams: KafkaStreams): Route = {
     val api = new API(streams)
     concat(
-      /*      path("movies" / Segment) { id: String =>
+      path("movies" / Segment) { id: String =>
         get {
-          val results = api.topTenBestScore
+          val results = api.movieIdStat(id.toInt)
           complete(
-            TopTenViewsResponse()
+            results
           )
         }
-      },*/
-
+      },
       path("stats" / "ten" / "best" / "score") {
         get {
           val results = api.topTenBestScore
