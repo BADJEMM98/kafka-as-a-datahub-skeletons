@@ -5,8 +5,24 @@ export default {
     components: {
         MovieDetail,
     },
-    props:{
-    }
+    data() {
+        return {
+            movies: [], // Liste des films récupérée depuis l'API
+        };
+    },
+    // Appeler votre API et remplir la liste de films dans mounted() ou created()
+    mounted() {
+        // Exemple de récupération de données depuis une API en utilisant fetch
+        fetch('http://localhost:8000/')
+            .then(response => response.json())
+            .then(data => {
+                this.movies = data; // Mettre à jour la liste des films avec les données récupérées
+                console.log(data)
+            })
+            .catch(error => {
+                console.error('Erreur lors de la récupération des données :', error);
+            });
+    },
 }
 </script>
 

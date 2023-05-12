@@ -21,6 +21,7 @@ object Main {
     val streams: KafkaStreams = StreamProcessing.run()
     Http()
       .newServerAt("0.0.0.0", 3000)
+
       .bindFlow(WebServer.routes(streams))
     logger.info(s"App started on 8080")
   }
