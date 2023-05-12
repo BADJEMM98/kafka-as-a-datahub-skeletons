@@ -116,11 +116,9 @@ object StreamProcessing extends KafkaConfig with PlayJsonSupport {
     .count()
     .join(
       meanScorePerMovie,
-      Named.as(numberViewsPerMovieStoreName),
+      //Named.as(numberViewsPerMovieStoreName),
       Materialized.as[Int, (String, Long), ByteArrayKeyValueStore](numberViewsPerMovieStoreName)
-    )(
-      { (count, meanScoreWithTitle) => (meanScoreWithTitle._1, count) }
-    )
+    )((count, meanScoreWithTitle) => (meanScoreWithTitle._1, count))
 
   override def applicationName = s"tmdb-events-stream-web-app-${UUID.randomUUID}"
 

@@ -20,9 +20,12 @@ class API(streamApp: KafkaStreams) {
       )
     )
 
-    val response = meanScoreForMovie.all().asScala.map { keyValue =>
-      MeanScoreForMovie(keyValue.key, keyValue.value._1, keyValue.value._2)
-    }
+    val response = meanScoreForMovie
+      .all()
+      .asScala
+      .map { keyValue =>
+        MeanScoreForMovie(keyValue.key, keyValue.value._1, keyValue.value._2)
+      }
       .toList
       .filter((movie) => movie.score >= 4)
       .sortBy(_.score)
@@ -40,9 +43,12 @@ class API(streamApp: KafkaStreams) {
       )
     )
 
-    val response = meanScoreForMovie.all().asScala.map { keyValue =>
-      MeanScoreForMovie(keyValue.key, keyValue.value._1, keyValue.value._2)
-    }
+    val response = meanScoreForMovie
+      .all()
+      .asScala
+      .map { keyValue =>
+        MeanScoreForMovie(keyValue.key, keyValue.value._1, keyValue.value._2)
+      }
       .toList
       .filter((movie) => movie.score <= 2)
       .sortBy(_.score)
@@ -59,9 +65,12 @@ class API(streamApp: KafkaStreams) {
       )
     )
 
-    val response = viewsForMovie.all().asScala.map { keyValue =>
-      ViewsForMovie(keyValue.key, keyValue.value._1, keyValue.value._2)
-    }
+    val response = viewsForMovie
+      .all()
+      .asScala
+      .map { keyValue =>
+        ViewsForMovie(keyValue.key, keyValue.value._1, keyValue.value._2)
+      }
       .toList
       .sortBy(_.count)
       .reverse
@@ -77,9 +86,12 @@ class API(streamApp: KafkaStreams) {
       )
     )
 
-    val response = viewsForMovie.all().asScala.map { keyValue =>
-      ViewsForMovie(keyValue.key, keyValue.value._1, keyValue.value._2)
-    }
+    val response = viewsForMovie
+      .all()
+      .asScala
+      .map { keyValue =>
+        ViewsForMovie(keyValue.key, keyValue.value._1, keyValue.value._2)
+      }
       .toList
       .sortBy(_.count)
       .take(10)
@@ -130,32 +142,36 @@ class API(streamApp: KafkaStreams) {
       )
     )
 
-
     val response = MovieIdResponse(
       ViewsForMovie(id, viewsForMovie.get(id)._1, viewsForMovie.get(id)._2),
       List(
         ViewsForCategory(
-          "start_only", totalViewsForStartOnly.get(id)
+          "start_only",
+          totalViewsForStartOnly.get(id)
         ),
         ViewsForCategory(
-          "half", totalViewsForHalf.get(id)
+          "half",
+          totalViewsForHalf.get(id)
         ),
         ViewsForCategory(
-          "full", totalViewsForFull.get(id)
+          "full",
+          totalViewsForFull.get(id)
         )
       ),
       List(
         ViewsForCategory(
-          "start_only", viewsForStartOnlyLastFiveMinutes.fetch(id,5)
+          "start_only",
+          viewsForStartOnlyLastFiveMinutes.fetch(id, 5)
         ),
         ViewsForCategory(
-          "half", viewsForHalfLastFiveMinutes.fetch(id,5)
+          "half",
+          viewsForHalfLastFiveMinutes.fetch(id, 5)
         ),
         ViewsForCategory(
-          "full", viewsForFullLastFiveMinutes.fetch(id,5)
+          "full",
+          viewsForFullLastFiveMinutes.fetch(id, 5)
         )
-      ),
-
+      )
     )
     response
   }
