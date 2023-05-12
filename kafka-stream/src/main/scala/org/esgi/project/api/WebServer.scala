@@ -4,27 +4,61 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 import org.apache.kafka.streams.KafkaStreams
-import org.apache.kafka.streams.state.ReadOnlyKeyValueStore
-import org.esgi.project.api.models.{MeanLatencyForURLResponse, VisitCountResponse}
-import org.esgi.project.streaming.models.MeanLatencyForURL
-
+import org.esgi.project.api.models._
+import org.esgi.project.api.API
 object WebServer extends PlayJsonSupport {
+
   def routes(streams: KafkaStreams): Route = {
+    val api = new API(streams)
     concat(
-      path("visits" / Segment) { period: String =>
+      /*      path("movies" / Segment) { id: String =>
         get {
+          val results = api.topTenBestScore
           complete(
-            List(VisitCountResponse("", 0))
+            TopTenViewsResponse()
+          )
+        }
+      },*/
+
+      path("stats" / "ten" / "best" / "score") {
+        get {
+          val results = api.topTenBestScore
+          complete(
+            results
           )
         }
       },
-      path("latency" / "beginning") {
+      path("stats" / "ten" / "worse" / "score") {
+        get {
+          val results = api.topTenWorstScore
+          complete(
+            results
+          )
+        }
+      },
+      path("stats" / "ten" / "best" / "views") {
+        get {
+          val results = api.topTenMostViewedMovie
+          complete(
+            results
+          )
+        }
+      },
+      path("stats" / "ten" / "worse" / "views") {
+        get {
+          val results = api.topTenLeastViewedMovie
+          complete(
+            results
+          )
+        }
+      }
+      /*      path("latency" / "beginning") {
         get {
           complete(
             List(MeanLatencyForURLResponse("", 0))
           )
         }
-      }
+      }*/
     )
   }
 }
