@@ -27,8 +27,31 @@ object WebServer extends PlayJsonSupport {
             results
           )
         }
+      },
+      path("stats" / "ten" / "worse" / "score") {
+        get {
+          val results = api.topTenWorstScore
+          complete(
+            results
+          )
+        }
+      },
+      path("stats" / "ten" / "best" / "views") {
+        get {
+          val results = api.topTenMostViewedMovie
+          complete(
+            results
+          )
+        }
+      },
+      path("stats" / "ten" / "worse" / "views") {
+        get {
+          val results = api.topTenLeastViewedMovie
+          complete(
+            results
+          )
+        }
       }
-
       /*      path("latency" / "beginning") {
         get {
           complete(
