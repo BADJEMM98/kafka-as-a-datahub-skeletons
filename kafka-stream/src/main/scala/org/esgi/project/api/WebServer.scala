@@ -28,7 +28,7 @@ object WebServer extends PlayJsonSupport {
           )
         }
       },
-      path("stats" / "ten" / "worse" / "score") {
+      path("stats" / "ten" / "worst" / "score") {
         get {
           val results = api.topTenWorstScore
           complete(
@@ -44,7 +44,7 @@ object WebServer extends PlayJsonSupport {
           )
         }
       },
-      path("stats" / "ten" / "worse" / "views") {
+      path("stats" / "ten" / "worst" / "views") {
         get {
           val results = api.topTenLeastViewedMovie
           complete(
