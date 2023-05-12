@@ -1,4 +1,4 @@
-package api.models
+package org.esgi.project.api.models
 
 import play.api.libs.json.{Json, OFormat}
 
@@ -6,6 +6,7 @@ import java.time.OffsetDateTime
 
 case class ViewsForMovie(
     id: Int,
+    title:String,
     count: Long
                                 )
 case class ViewsForCategory(
@@ -19,6 +20,7 @@ case class ViewsForCategoryInWindow(
                                    )
 case class MeanScoreForMovie(
     id: Int,
+    title:String,
     score: Float
                             )
 
