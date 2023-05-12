@@ -24,7 +24,7 @@ object WebServer extends PlayJsonSupport {
         get {
           val results = api.topTenBestScore
           complete(
-            results
+            results.aggregations
           )
         }
       },
@@ -32,7 +32,7 @@ object WebServer extends PlayJsonSupport {
         get {
           val results = api.topTenWorstScore
           complete(
-            results
+            results.aggregations
           )
         }
       },
@@ -40,7 +40,7 @@ object WebServer extends PlayJsonSupport {
         get {
           val results = api.topTenMostViewedMovie
           complete(
-            results
+            results.aggregations
           )
         }
       },
@@ -48,17 +48,10 @@ object WebServer extends PlayJsonSupport {
         get {
           val results = api.topTenLeastViewedMovie
           complete(
-            results
+            results.aggregations
           )
         }
       }
-      /*      path("latency" / "beginning") {
-        get {
-          complete(
-            List(MeanLatencyForURLResponse("", 0))
-          )
-        }
-      }*/
     )
   }
 }

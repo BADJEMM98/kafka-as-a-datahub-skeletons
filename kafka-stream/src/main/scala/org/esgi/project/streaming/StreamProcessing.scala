@@ -3,10 +3,10 @@ package org.esgi.project.streaming
 import io.github.azhur.kafka.serde.PlayJsonSupport
 import org.apache.kafka.common.serialization.Serde
 import org.apache.kafka.streams.{KafkaStreams, Topology}
-import org.apache.kafka.streams.kstream.{JoinWindows, TimeWindows, Windowed}
+import org.apache.kafka.streams.kstream.{JoinWindows, Named, TimeWindows, Windowed}
 import org.apache.kafka.streams.scala.ImplicitConversions._
 import org.apache.kafka.streams.scala._
-import org.apache.kafka.streams.scala.kstream._
+import org.apache.kafka.streams.scala.kstream.{Materialized, _}
 import org.apache.kafka.streams.scala.serialization.Serdes._
 import org.esgi.project.streaming.models.{Like, View, ViewsAndLikes}
 import utils.KafkaConfig
@@ -33,29 +33,33 @@ object StreamProcessing extends KafkaConfig with PlayJsonSupport {
   implicit val viewSerde: Serde[View] = toSerde[View]
   implicit val likeSerde: Serde[Like] = toSerde[Like]
 
-  val views: KStream[Int, View] = builder.stream(viewsTopicName)
-  val likes: KStream[Int, Like] = builder.stream(likesTopicName)
+  val views: KStream[String, View] = builder.stream(viewsTopicName)
+  val likes: KStream[String, Like] = builder.stream(likesTopicName)
 
-  val viewsAndLikes: KStream[Int, ViewsAndLikes] = views.join(likes)(
-    joiner = { (view, like) =>
-      ViewsAndLikes(
-        view.id,
-        view.title,
-        view.view_category,
-        like.score
-      )
-    },
-    windows = JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(30))
-  )
+  val viewsAndLikes: KStream[Int, ViewsAndLikes] = views
+    .join(likes)(
+      joiner = { (view, like) =>
+        ViewsAndLikes(
+          view.id,
+          view.title,
+          view.view_category,
+          like.score
+        )
+      },
+      windows = JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(30))
+    )
+    .map((key, value) => (key.toInt, value))
+
   // Moyenne de score par film
   val meanScorePerMovie: KTable[Int, (String, Float)] = viewsAndLikes
-    .groupBy((_, value) => value._id)
-    .aggregate[List[ViewsAndLikes]](List.empty[ViewsAndLikes])((_, value, aggregate) => aggregate :+ value)(
-      Materialized.as(meanScorePerMovieStoreName)
+    .groupBy((_, value) => value.id)
+    .aggregate[List[ViewsAndLikes]](List.empty[ViewsAndLikes])((_, value, aggregate) => aggregate :+ value)
+    .mapValues(
+      movies => {
+        (movies.map(_.title).last, movies.map(_.score).sum / movies.size)
+      },
+      Materialized.as[Int, (String, Float), ByteArrayKeyValueStore](meanScorePerMovieStoreName)
     )
-    .mapValues(movies => {
-      (movies.map(_.title).last, movies.map(_.score).sum / movies.size)
-    })
   val allViewsForHalfCategory: KTable[Int, Long] = views
     .filter((_, view) => view.view_category.contains("half"))
     .groupBy((_, view) => view.id)
@@ -109,8 +113,14 @@ object StreamProcessing extends KafkaConfig with PlayJsonSupport {
     )
   // Nombre de vues par films
   val numberViewsPerMovie: KTable[Int, (String, Long)] = viewsAndLikes.groupByKey
-    .count()(Materialized.as(numberViewsPerMovieStoreName))
-    .join(meanScorePerMovie)((count, meanScoreWithTitle) => (meanScoreWithTitle._1, count))
+    .count()
+    .join(
+      meanScorePerMovie,
+      Named.as(numberViewsPerMovieStoreName),
+      Materialized.as[Int, (String, Long), ByteArrayKeyValueStore](numberViewsPerMovieStoreName)
+    )(
+      { (count, meanScoreWithTitle) => (meanScoreWithTitle._1, count) }
+    )
 
   override def applicationName = s"tmdb-events-stream-web-app-${UUID.randomUUID}"
 
